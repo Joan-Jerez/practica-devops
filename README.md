@@ -1,2 +1,1 @@
 # practica-devops
-Hola mundo 
