@@ -1,0 +1,68 @@
+services:
+  app:
+    build:
+      context: ./app
+    container_name: demo_app
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+      - node-exporter
+      - cadvisor
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: node_exporter
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
